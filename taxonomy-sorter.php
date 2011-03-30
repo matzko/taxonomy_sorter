@@ -2,7 +2,7 @@
 /*
 Plugin Name: WordPress Taxonomy Sorter
 Plugin URI:
-Description: This plugin allows you to sort taxonomies.
+Description: A WordPress plugin that allows you to sort taxonomies.
 Author: Austin Matzko
 Author URI: http://austinmatzko.com
 Version: 1.0-alpha
