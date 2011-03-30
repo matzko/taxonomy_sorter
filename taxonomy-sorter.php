@@ -44,4 +44,4 @@ function taxonomy_sorter_init_event()
 	load_plugin_textdomain('taxonomy-sorter', null, dirname( __FILE__ ) . DIRECTORY_SEPARATOR . 'includes' . DIRECTORY_SEPARATOR . 'l10n');
 }
 
-add_action('init', 'taxonomy_sorter_init_event');
+add_action('plugins_loaded', 'taxonomy_sorter_init_event');
