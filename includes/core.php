@@ -62,6 +62,13 @@ class WP_Taxonomy_Sort_Control
 			'rewrite' => false,
 			'query_var' => false,
 		));
+
+		if ( empty( $this->tax_object ) ) {
+			$this->tax_object = $this->_create_tax_object();
+			if ( ! empty( $this->tax_object ) ) {
+				update_option( 'wp_tax_sort_object', $this->tax_object );
+			}
+		}
 	}
 
 	public function filter_manage_tax_columns( $columns = array() )
