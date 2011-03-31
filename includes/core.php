@@ -113,6 +113,29 @@ class WP_Taxonomy_Sort_Control
 
 class WP_Taxonomy_Sorter
 {
+	public static function get_term_order( $term_id = 0, $taxonomy = '' )
+	{
+		global $wpdb, $wp_taxonomy_sorter;
+
+		$term_id = (int) $term_id;
+		$object_id = (int) $wp_taxonomy_sorter->tax_object;
+		$tax = mysql_real_escape_string( $taxonomy, $wpdb->dbh );
+
+		if ( taxonomy_exists( $taxonomy ) ) {
+			$query = "SELECT ort.term_order
+				FROM {$wpdb->term_relationships} AS ort
+				JOIN {$wpdb->term_taxonomy} AS ott
+					ON ott.term_taxonomy_id = ort.term_taxonomy_id
+				WHERE ort.object_id = {$object_id}
+					AND ott.term_id = {$term_id} 
+					AND ott.taxonomy = '{$tax}'
+				LIMIT 1";
+			return (int) $wpdb->get_var( $query );
+		}
+
+		return 0;
+	}
+
 	/**
 	 * Assign the order of a given set of terms for a taxonomy.
 	 *
