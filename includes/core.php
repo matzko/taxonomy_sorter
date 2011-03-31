@@ -97,6 +97,9 @@ class WP_Taxonomy_Sort_Control
 		return $markup;
 	}
 
+	/**
+	 * Filter get_terms() queries so that the results are ordered by the determined order, if available.
+	 */
 	public function filter_terms_clauses( $pieces = array(), $taxonomies = array(), $args = null )
 	{
 		global $wpdb;
