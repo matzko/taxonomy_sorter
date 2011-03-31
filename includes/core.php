@@ -53,10 +53,10 @@ class WP_Taxonomy_Sort_Control
 			wp_verify_nonce( $_GET['move-nonce'], 'move-term-nonce' ) &&
 			current_user_can( get_taxonomy( $_GET['tax'] )->cap->edit_terms )
 		) {
-			WP_Taxonomy_Sorter::move_term_up( $_GET['move-term-down'], $_GET['tax'] );
+			WP_Taxonomy_Sorter::move_term_down( $_GET['move-term-down'], $_GET['tax'] );
 			wp_redirect( remove_query_arg( array(
 				'move-nonce',
-				'move-term-up',
+				'move-term-down',
 				'tax',
 			) ) );
 			exit;
@@ -249,8 +249,48 @@ class WP_Taxonomy_Sorter
 
 	public static function move_term_down( $term_id = 0, $taxonomy = '' )
 	{
+		global $wp_taxonomy_sorter;
 		$term_id = (int) $term_id;
-		if ( taxonomy_exists( $taxonomy ) ) {	
+		if ( taxonomy_exists( $taxonomy ) ) {
+			$terms = wp_get_object_terms( 
+				$wp_taxonomy_sorter->tax_object, 
+				$taxonomy, 
+				array( 
+					'fields' => 'ids',
+					'orderby' => 'term_order',
+				) 
+			);
+
+			$all_terms = get_terms( $taxonomy, array( 'fields' => 'ids', 'hide_empty' => false ) );
+			$all_terms = is_wp_error( $all_terms ) ? array() : array_map( 'intval', $all_terms );
+
+			$terms = is_wp_error( $terms ) ? array() : array_map( 'intval', $terms );
+
+			$extras = array_diff( $all_terms, $terms );
+			$terms = array_merge( $terms, $extras );
+			
+			$term_key = array_search( $term_id, $terms );
+
+			$ordered_terms = array();
+			if ( false !== $term_key ) {
+				if ( ( count( $terms ) - 1 ) == $term_key ) {
+					$ordered_terms = $terms;
+				} elseif ( ( count( $terms ) - 1 ) > $term_key ) {
+					$first = array_slice( $terms, 0, $term_key );
+					$last = array_slice( $terms, $term_key );
+
+					$move_down = array_shift( $last );
+					
+					array_push( $first, array_shift( $last ), $move_down );
+					$ordered_terms = array_merge( $first, $last );
+				}
+			} else {
+				$ordered_terms = $terms;
+			}
+
+			if ( ! empty( $ordered_terms ) ) {
+				self::set_terms_order( $taxonomy, $ordered_terms );
+			}
 		}
 	}
 
