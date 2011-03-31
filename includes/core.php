@@ -95,3 +95,27 @@ class WP_Taxonomy_Sort_Control
 		return $markup;
 	}
 }
+
+class WP_Taxonomy_Sorter
+{
+	/**
+	 * Assign the order of a given set of terms for a taxonomy.
+	 *
+	 * @param string $taxonomy The taxonomy of the terms.
+	 * @param array $ordered_term_ids The IDs of the terms to order.
+	 */
+	public static function set_terms_order( $taxonomy = '', $ordered_term_ids = array() )
+	{
+		global $wp_taxonomies, $wp_taxonomy_sorter;
+
+		if ( taxonomy_exists( $taxonomy ) ) {
+			$ids = array_filter( array_map( 'intval', $ordered_term_ids ) );
+			if ( ! empty( $ids ) ) {
+				$current_value = isset( $wp_taxonomies[$taxonomy]->sort ) ? $wp_taxonomies[$taxonomy]->sort : null; 
+				$wp_taxonomies[$taxonomy]->sort = true;
+				wp_set_object_terms( $wp_taxonomy_sorter->tax_object, $ids, $taxonomy ); 
+				$wp_taxonomies[$taxonomy]->sort = $current_value;
+			}
+		}
+	}
+}
