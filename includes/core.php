@@ -18,7 +18,7 @@ class WP_Taxonomy_Sort_Control
 	{
 		$id = wp_insert_post( array(
 			'post_type' => '_tax_object',
-			'post_status' => 'publish',
+			'post_status' => 'draft',
 			'post_author' => 1,
 			'post_title' => 'taxonomy ordering placeholder',
 		) );
