@@ -30,6 +30,39 @@ class WP_Taxonomy_Sort_Control
 		return 0;
 	}
 
+	protected function _listen_for_ordering()
+	{
+		if ( 
+			! empty( $_GET['move-term-up'] ) &&
+			! empty( $_GET['move-nonce'] ) &&
+			! empty( $_GET['tax'] ) &&
+			wp_verify_nonce( $_GET['move-nonce'], 'move-term-nonce' ) &&
+			current_user_can( get_taxonomy( $_GET['tax'] )->cap->edit_terms )
+		) {
+			WP_Taxonomy_Sorter::move_term_up( $_GET['move-term-up'], $_GET['tax'] );
+			wp_redirect( remove_query_arg( array(
+				'move-nonce',
+				'move-term-up',
+				'tax',
+			) ) );
+			exit;
+		} elseif ( 
+			! empty( $_GET['move-term-down'] ) &&
+			! empty( $_GET['move-nonce'] ) &&
+			! empty( $_GET['tax'] ) &&
+			wp_verify_nonce( $_GET['move-nonce'], 'move-term-nonce' ) &&
+			current_user_can( get_taxonomy( $_GET['tax'] )->cap->edit_terms )
+		) {
+			WP_Taxonomy_Sorter::move_term_up( $_GET['move-term-down'], $_GET['tax'] );
+			wp_redirect( remove_query_arg( array(
+				'move-nonce',
+				'move-term-up',
+				'tax',
+			) ) );
+			exit;
+		}
+	}
+
 	public function event_admin_head()
 	{
 		?>
@@ -72,6 +105,8 @@ class WP_Taxonomy_Sort_Control
 		}
 
 		add_action( 'admin_head', array( $this, 'event_admin_head' ) );
+
+		$this->_listen_for_ordering();
 	}
 
 	public function event_init()
@@ -146,10 +181,13 @@ class WP_Taxonomy_Sort_Control
 	public function filter_terms_clauses( $pieces = array(), $taxonomies = array(), $args = null )
 	{
 		global $wpdb;
-		$pieces['join'] .= " LEFT JOIN {$wpdb->term_relationships} AS ort ON tt.term_taxonomy_id = ort.term_taxonomy_id ";
-		$pieces['where'] .= " AND ( ort.object_id = {$this->tax_object} OR ort.object_id IS NULL ) ";
-		$orderby = array( 'ort.term_order', trim( str_replace( 'ORDER BY', '', $pieces['orderby'] ) ) );
-		$pieces['orderby'] = ' ORDER BY ' . implode( ',', array_filter( $orderby ) );
+		$is_ordered = wp_get_object_terms( $this->tax_object, $taxonomies, array( 'fields' => 'ids' ) );
+		if ( ! empty( $is_ordered ) ) {
+			$pieces['join'] .= " LEFT JOIN {$wpdb->term_relationships} AS ort ON tt.term_taxonomy_id = ort.term_taxonomy_id ";
+			$pieces['where'] .= " AND ( ort.object_id = {$this->tax_object} OR ort.object_id IS NULL ) ";
+			$orderby = array( 'ort.term_order', trim( str_replace( 'ORDER BY', '', $pieces['orderby'] ) ) );
+			$pieces['orderby'] = ' ORDER BY ' . implode( ',', array_filter( $orderby ) );
+		}
 		return $pieces;
 	}
 }
@@ -206,6 +244,60 @@ class WP_Taxonomy_Sorter
 			) );
 		} else {
 			return '';
+		}
+	}
+
+	public static function move_term_down( $term_id = 0, $taxonomy = '' )
+	{
+		$term_id = (int) $term_id;
+		if ( taxonomy_exists( $taxonomy ) ) {	
+		}
+	}
+
+	public static function move_term_up( $term_id = 0, $taxonomy = '' )
+	{
+		global $wp_taxonomy_sorter;
+		$term_id = (int) $term_id;
+		if ( taxonomy_exists( $taxonomy ) ) {	
+			$terms = wp_get_object_terms( 
+				$wp_taxonomy_sorter->tax_object, 
+				$taxonomy, 
+				array( 
+					'fields' => 'ids',
+					'orderby' => 'term_order',
+				) 
+			);
+
+			$all_terms = get_terms( $taxonomy, array( 'fields' => 'ids', 'hide_empty' => false ) );
+			$all_terms = is_wp_error( $all_terms ) ? array() : array_map( 'intval', $all_terms );
+
+			$terms = is_wp_error( $terms ) ? array() : array_map( 'intval', $terms );
+
+			$extras = array_diff( $all_terms, $terms );
+			$terms = array_merge( $terms, $extras );
+			
+			$term_key = array_search( $term_id, $terms );
+
+			$ordered_terms = array();
+			if ( false !== $term_key ) {
+				if ( 0 === $term_key ) {
+					$ordered_terms = $terms;
+				} elseif ( 0 < $term_key ) {
+					$first = array_slice( $terms, 0, $term_key );
+					$last = array_slice( $terms, $term_key );
+					
+					$move_down = array_pop( $first );
+					
+					array_push( $first, array_shift( $last ), $move_down );
+					$ordered_terms = array_merge( $first, $last );
+				}
+			} else {
+				$ordered_terms = $terms;
+			}
+
+			if ( ! empty( $ordered_terms ) ) {
+				self::set_terms_order( $taxonomy, $ordered_terms );
+			}
 		}
 	}
 
