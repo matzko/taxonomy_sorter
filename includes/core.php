@@ -10,6 +10,8 @@ class WP_Taxonomy_Sort_Control
 		add_action( 'admin_init', array($this, 'event_admin_init' ), 99 );
 
 		add_filter( 'terms_clauses', array( $this, 'filter_terms_clauses' ), 99, 3 );
+		// add_filter( 'wp_get_object_terms', array( $this, 'filter_wp_get_object_terms' ), 99, 4 );
+		add_filter( 'wp_taxonomy_sorter_cat_order', array( 'WP_Taxonomy_Sorter', 'order_terms_by_taxonomy' ), 10, 2 );
 
 		$this->tax_object = (int) get_option( 'wp_tax_sort_object' );
 	}
@@ -190,6 +192,11 @@ class WP_Taxonomy_Sort_Control
 		}
 		return $pieces;
 	}
+
+	public function filter_wp_get_object_terms( $terms = array(), $object_ids = array(), $taxonomies = array(), $args = null )
+	{
+		return $terms;
+	}
 }
 
 class WP_Taxonomy_Sorter
@@ -339,6 +346,42 @@ class WP_Taxonomy_Sorter
 				self::set_terms_order( $taxonomy, $ordered_terms );
 			}
 		}
+	}
+
+	public static function order_terms_by_taxonomy( $term_ids = array(), $taxonomy = '' )
+	{
+		global $wp_taxonomy_sorter;
+
+		if ( taxonomy_exists( $taxonomy ) ) {
+			$ordered = wp_get_object_terms( 
+				$wp_taxonomy_sorter->tax_object, 
+				$taxonomy, 
+				array( 
+					'fields' => 'ids',
+					'orderby' => 'term_order',
+				) 
+			);
+
+			if ( ! empty( $ordered ) && ! is_wp_error( $ordered ) ) {
+				$terms = array();
+				$ordered = array_map( 'intval', $ordered );
+				$term_ids = array_map( 'intval', $term_ids );
+				$extras = array_diff( $ordered, $term_ids );
+
+				foreach( (array) $ordered as $ord ) {
+					if ( in_array( $ord, $term_ids ) ) {
+						$terms[] = $ord;
+					}
+				}
+
+				$terms = array_filter( array_merge( $terms, $extras ) );
+				if ( ! empty( $terms ) ) {
+					$term_ids = $terms;
+				}
+			}
+		}
+
+		return $term_ids;
 	}
 
 	/**
