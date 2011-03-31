@@ -9,6 +9,8 @@ class WP_Taxonomy_Sort_Control
 		add_action( 'init', array( $this, 'event_init' ) );
 		add_action( 'admin_init', array($this, 'event_admin_init' ), 99 );
 
+		add_filter( 'terms_clauses', array( $this, 'filter_terms_clauses' ), 99, 3 );
+
 		$this->tax_object = (int) get_option( 'wp_tax_sort_object' );
 	}
 
@@ -93,6 +95,16 @@ class WP_Taxonomy_Sort_Control
 			}
 		}
 		return $markup;
+	}
+
+	public function filter_terms_clauses( $pieces = array(), $taxonomies = array(), $args = null )
+	{
+		global $wpdb;
+		$pieces['join'] .= " LEFT JOIN {$wpdb->term_relationships} AS ort ON tt.term_taxonomy_id = ort.term_taxonomy_id ";
+		$pieces['where'] .= " AND ( ort.object_id = {$this->tax_object} OR ort.object_id IS NULL ) ";
+		$orderby = array( 'ort.term_order', trim( str_replace( 'ORDER BY', '', $pieces['orderby'] ) ) );
+		$pieces['orderby'] = ' ORDER BY ' . implode( ',', array_filter( $orderby ) );
+		return $pieces;
 	}
 }
 
