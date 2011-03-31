@@ -30,6 +30,39 @@ class WP_Taxonomy_Sort_Control
 		return 0;
 	}
 
+	public function event_admin_head()
+	{
+		?>
+		<style type="text/css">
+			.move-terms-wrap {
+				width:64px;
+			}
+
+			.move-terms-wrap:after {
+				clear:both;
+				content:'.';
+				display:block;
+				height:0;
+				visibility:hidden;
+			}
+			a.move-term-link {
+				background:url(<?php echo plugin_dir_url( dirname( __FILE__ ) ) . 'client-files/images/arrow.png'; ?>) no-repeat 0 0;
+				display:block;
+				float:left;
+				height:32px;
+				overflow:hidden;
+				text-align:left;
+				text-indent:-999em;
+				width:32px;
+			}
+			
+			a.move-up-link {
+				background-position:-32px 0;
+			}
+		</style>
+		<?php
+	}
+
 	public function event_admin_init()
 	{
 		$taxonomies = apply_filters( 'wp_taxonomy_sort_orderable_taxonomies', get_taxonomies( array( 'show_ui' => true ) ) );
@@ -37,6 +70,8 @@ class WP_Taxonomy_Sort_Control
 			add_filter( 'manage_edit-' . $tax_id . '_columns', array($this, 'filter_manage_tax_columns') );
 			add_filter( 'manage_' . $tax_id . '_custom_column', array($this, 'filter_manage_tax_custom_column' ), 10, 3 );
 		}
+
+		add_action( 'admin_head', array( $this, 'event_admin_head' ) );
 	}
 
 	public function event_init()
@@ -91,7 +126,15 @@ class WP_Taxonomy_Sort_Control
 				isset( $tax->cap->edit_terms ) &&
 				current_user_can( $tax->cap->edit_terms )
 			) {
-				return 'my column content';
+				return sprintf( 
+					'<div class="move-terms-wrap"><a href="%1$s" class="move-term-link move-up-link" title="%2$s">%3$s</a> <a href="%4$s" class="move-term-link move-down-link" title="%5$s">%6$s</a></div>',
+					WP_Taxonomy_Sorter::move_up_link( $term_id, $screen->taxonomy ),
+					esc_attr( __( 'Move Up', 'taxonomy-sorter' ) ),
+					__( 'Move Up', 'taxonomy-sorter' ),
+					WP_Taxonomy_Sorter::move_down_link( $term_id, $screen->taxonomy ),
+					esc_attr( __( 'Move Down', 'taxonomy-sorter' ) ),
+					__( 'Move Down', 'taxonomy-sorter' )
+				);
 			}
 		}
 		return $markup;
@@ -134,6 +177,36 @@ class WP_Taxonomy_Sorter
 		}
 
 		return 0;
+	}
+
+	public static function move_down_link( $term_id = 0, $taxonomy = '' )
+	{
+		$term_id = (int) $term_id;
+
+		if ( taxonomy_exists( $taxonomy ) ) {	
+			return add_query_arg( array(
+				'move-term-down' => $term_id,
+				'tax' => $taxonomy,
+				'move-nonce' => wp_create_nonce( 'move-term-nonce' ),
+			) );
+		} else {
+			return '';
+		}
+	}
+
+	public static function move_up_link( $term_id = 0, $taxonomy = '' )
+	{
+		$term_id = (int) $term_id;
+
+		if ( taxonomy_exists( $taxonomy ) ) {	
+			return add_query_arg( array(
+				'move-term-up' => $term_id,
+				'tax' => $taxonomy,
+				'move-nonce' => wp_create_nonce( 'move-term-nonce' ),
+			) );
+		} else {
+			return '';
+		}
 	}
 
 	/**
